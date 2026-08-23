@@ -3,6 +3,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const fechaInput = document.getElementById('fecha');
     const horaSelect = document.getElementById('hora');
 
+    // Establecer fecha mínima como hoy según la zona horaria del usuario
+    const hoy = new Date();
+    const hoyFormato = hoy.toISOString().split('T')[0];
+    fechaInput.min = hoyFormato;
+
 
     fechaInput.addEventListener('change', function () {
 
@@ -129,6 +134,16 @@ document.addEventListener('DOMContentLoaded', function () {
         // CREAR OPCIONES DEL SELECT
         // ==========================================
 
+        // Obtener fecha y hora actual para validación de 15 minutos
+        const ahora = new Date();
+        const limiteMinimo = new Date(ahora.getTime() + 15 * 60000); // +15 minutos
+
+        // Verificar si la fecha seleccionada es hoy
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const fechaSeleccionada = new Date(fechaInput.value + 'T00:00:00');
+        const esHoy = fechaSeleccionada.getTime() === hoy.getTime();
+
         turnos.forEach(function (turno) {
 
             const opcion =
@@ -154,6 +169,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 turno.inicio +
                 ' - ' +
                 turno.fin;
+
+
+            // Si es hoy, verificar si el horario cumple con los 15 minutos
+            if (esHoy) {
+                const [horas, minutos] = turno.inicio.split(':').map(Number);
+                const fechaTurno = new Date(fechaSeleccionada);
+                fechaTurno.setHours(horas, minutos, 0, 0);
+
+                if (fechaTurno < limiteMinimo) {
+                    opcion.disabled = true;
+                    opcion.textContent += ' (No disponible - menos de 15 min)';
+                }
+            }
 
 
             horaSelect.appendChild(opcion);

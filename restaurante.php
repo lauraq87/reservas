@@ -1,12 +1,30 @@
 <?php
 
+session_start();
 require_once 'config/database.php';
+
+// ======================================================
+// PROCESAR LOGOUT
+// ======================================================
+
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: restaurante.php');
+    exit;
+}
 
 // ======================================================
 // VERIFICAR SI EL USUARIO YA INGRESÓ
 // ======================================================
 
-$mostrarContenido = isset($_POST['login_submit']);
+// Procesar login si se envió el formulario
+if (isset($_POST['login_submit'])) {
+    $_SESSION['usuario_logueado'] = true;
+    $mostrarContenido = true;
+} else {
+    // Verificar si ya hay una sesión activa
+    $mostrarContenido = isset($_SESSION['usuario_logueado']) && $_SESSION['usuario_logueado'] === true;
+}
 
 // ======================================================
 // OBTENER INFORMACIÓN GENERAL DE LAS MESAS
@@ -148,9 +166,8 @@ foreach ($ubicaciones as $ubicacion) {
         =========================================== -->
 
         <div class="navegacion superior-derecha">
-
-            <a href="index.php" class="boton boton-volver">
-                ← Volver al inicio
+            <a href="restaurante.php?logout=1" class="boton boton-logout">
+                Cerrar sesión
             </a>
 
         </div>
@@ -209,10 +226,10 @@ foreach ($ubicaciones as $ubicacion) {
             </div>
         </div>
 
+        <?php endif; ?>
+
     </main>
 
 </body>
 
 </html>
-
-<?php endif; ?>

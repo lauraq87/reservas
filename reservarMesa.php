@@ -7,20 +7,17 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        content="width=device-width, initial-scale=1.0">
 
     <title>Realizar una reserva</title>
 
     <link
         rel="stylesheet"
-        href="css/style.css"
-    >
+        href="css/style.css">
 
     <script
         src="js/horarios.js"
-        defer
-    ></script>
+        defer></script>
 
 </head>
 
@@ -34,9 +31,8 @@
 
             <a
                 href="index.php"
-                class="boton boton-volver"
-            >
-                ← Volver al inicio 
+                class="boton boton-volver">
+                ← Volver al inicio
             </a>
 
         </div>
@@ -45,8 +41,7 @@
 
         <form
             action="reservar.php"
-            method="POST"
-        >
+            method="POST">
 
             <section>
 
@@ -64,8 +59,7 @@
                             id="nombre"
                             name="nombre"
                             placeholder="Tu nombre"
-                            required
-                        >
+                            required>
 
                     </div>
 
@@ -80,8 +74,7 @@
                             id="apellido"
                             name="apellido"
                             placeholder="Tu apellido"
-                            required
-                        >
+                            required>
 
                     </div>
                 </div>
@@ -101,8 +94,7 @@
                         pattern="[0-9+\- ]+"
                         title="Solo números, + y -"
                         required
-                        oninput="this.value = this.value.replace(/[^0-9+\- ]/g, '')"
-                    >
+                        oninput="this.value = this.value.replace(/[^0-9+\- ]/g, '')">
 
                 </div>
 
@@ -124,9 +116,7 @@
                             type="date"
                             id="fecha"
                             name="fecha"
-                            min="<?php echo date('Y-m-d', strtotime('-1 day')); ?>"
-                            required
-                        >
+                            required>
 
                     </div>
 
@@ -139,8 +129,7 @@
                         <select
                             id="hora"
                             name="hora"
-                            required
-                        >
+                            required>
 
                             <option value="">
                                 Seleccioná un turno
@@ -162,8 +151,7 @@
                             name="personas"
                             min="1"
                             placeholder="Cantidad"
-                            required
-                        >
+                            required>
 
                     </div>
                 </div>

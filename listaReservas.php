@@ -1,9 +1,18 @@
 <?php
 
+session_start();
+date_default_timezone_set('America/Argentina/Buenos_Aires');
+
 require_once 'config/database.php';
 require_once 'src/Disponibilidad.php';
 
-$fecha = $_GET['fecha'] ?? date('Y-m-d');
+// Verificar si el usuario está logueado
+if (!isset($_SESSION['usuario_logueado']) || $_SESSION['usuario_logueado'] !== true) {
+    header('Location: restaurante.php');
+    exit;
+}
+
+$fecha = $_GET['fecha'] ?? (new DateTime())->format('Y-m-d');
 
 // ======================================================
 // OBTENER TODAS LAS MESAS DEL RESTAURANTE
@@ -32,11 +41,12 @@ foreach ($todasLasMesas as $mesa) {
 // GENERAR HORARIOS DISPONIBLES SEGÚN EL DÍA
 // ======================================================
 
-function generarHorariosDisponibles($fecha) {
+function generarHorariosDisponibles($fecha)
+{
     $fechaObj = DateTime::createFromFormat('Y-m-d', $fecha);
     $diaSemana = (int) $fechaObj->format('N');
     $horarios = [];
-    
+
     // Lunes a viernes: 10:00 a 24:00 (cada 15 minutos)
     if ($diaSemana >= 1 && $diaSemana <= 5) {
         for ($hora = 10; $hora < 24; $hora++) {
@@ -66,7 +76,7 @@ function generarHorariosDisponibles($fecha) {
             }
         }
     }
-    
+
     return $horarios;
 }
 
@@ -76,13 +86,25 @@ $horariosDisponibles = generarHorariosDisponibles($fecha);
 // CALCULAR DISPONIBILIDAD POR HORARIO
 // ======================================================
 
-function obtenerMesasOcupadasEnHorario($pdo, $fecha, $hora) {
+function obtenerMesasOcupadasEnHorario($pdo, $fecha, $hora)
+{
+    // Una mesa está ocupada si el intervalo de la reserva
+    // [fecha+hora, fecha+hora+duración) se solapa con el
+    // intervalo del horario consultado (120 minutos).
+    $inicioHorario = $fecha . ' ' . $hora . ':00';
+
+    $finHorario = (new DateTime($inicioHorario))
+        ->modify('+120 minutes')
+        ->format('Y-m-d H:i:s');
+
     $sql = "
         SELECT 
             r.id as reserva_id,
             r.nombre,
             r.apellido,
             r.personas,
+            r.fecha as reserva_fecha,
+            r.hora as reserva_hora,
             m.id as mesa_id,
             m.ubicacion,
             m.numero as mesa_numero,
@@ -90,17 +112,17 @@ function obtenerMesasOcupadasEnHorario($pdo, $fecha, $hora) {
         FROM reservas r
         INNER JOIN reserva_mesa rm ON r.id = rm.reserva_id
         INNER JOIN mesas m ON rm.mesa_id = m.id
-        WHERE r.fecha = :fecha
-        AND r.hora = :hora
+        WHERE TIMESTAMP(r.fecha, r.hora) < :fin_horario
+        AND TIMESTAMP(r.fecha, r.hora) + INTERVAL r.duracion_minutos MINUTE > :inicio_horario
         ORDER BY r.id ASC, m.ubicacion ASC, m.numero ASC
     ";
-    
+
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
-        ':fecha' => $fecha,
-        ':hora' => $hora
+        ':inicio_horario' => $inicioHorario,
+        ':fin_horario' => $finHorario
     ]);
-    
+
     return $stmt->fetchAll();
 }
 
@@ -112,15 +134,31 @@ $datosPorHorario = [];
 
 foreach ($horariosDisponibles as $horario) {
     $mesasOcupadas = obtenerMesasOcupadasEnHorario($pdo, $fecha, $horario);
-    
+
     // Si no hay reservas en este horario, no lo agregamos
     if (empty($mesasOcupadas)) {
         continue;
     }
-    
+
+    // Reservas que COMIENZAN en este horario y en esta fecha
+    // (para no repetir la misma reserva en cada bloque
+    // de 15 minutos mientras dura)
+    $mesasReservasQueInician = array_filter(
+        $mesasOcupadas,
+        function ($mesaOcupada) use ($fecha, $horario) {
+            return $mesaOcupada['reserva_fecha'] === $fecha &&
+                substr($mesaOcupada['reserva_hora'], 0, 5) === $horario;
+        }
+    );
+
+    // Si ninguna reserva comienza en este horario, no lo mostramos
+    if (empty($mesasReservasQueInician)) {
+        continue;
+    }
+
     // Agrupar mesas por reserva
     $reservasPorId = [];
-    foreach ($mesasOcupadas as $mesaOcupada) {
+    foreach ($mesasReservasQueInician as $mesaOcupada) {
         $reservaId = $mesaOcupada['reserva_id'];
         if (!isset($reservasPorId[$reservaId])) {
             $reservasPorId[$reservaId] = [
@@ -137,7 +175,7 @@ foreach ($horariosDisponibles as $horario) {
             'capacidad' => $mesaOcupada['mesa_capacidad']
         ];
     }
-    
+
     // Calcular mesas disponibles por ubicación
     $mesasDisponiblesPorUbicacion = [
         'A' => [],
@@ -145,13 +183,13 @@ foreach ($horariosDisponibles as $horario) {
         'C' => [],
         'D' => []
     ];
-    
+
     // Marcar mesas ocupadas
     $mesasOcupadasIds = [];
     foreach ($mesasOcupadas as $mesaOcupada) {
         $mesasOcupadasIds[] = $mesaOcupada['mesa_id'];
     }
-    
+
     // Encontrar mesas disponibles por ubicación
     foreach ($mesasPorUbicacion as $ubicacion => $mesas) {
         foreach ($mesas as $mesa) {
@@ -160,7 +198,7 @@ foreach ($horariosDisponibles as $horario) {
             }
         }
     }
-    
+
     // Organizar mesas ocupadas por ubicación (agrupadas por reserva)
     $mesasOcupadasPorUbicacion = [
         'A' => [],
@@ -168,7 +206,7 @@ foreach ($horariosDisponibles as $horario) {
         'C' => [],
         'D' => []
     ];
-    
+
     foreach ($reservasPorId as $reservaId => $reserva) {
         foreach ($reserva['mesas'] as $mesa) {
             $ubicacion = $mesa['ubicacion'];
@@ -181,13 +219,13 @@ foreach ($horariosDisponibles as $horario) {
             ];
         }
     }
-    
+
     // Calcular total de mesas disponibles
     $totalDisponibles = 0;
     foreach ($mesasDisponiblesPorUbicacion as $ubicacion => $mesas) {
         $totalDisponibles += count($mesas);
     }
-    
+
     $datosPorHorario[$horario] = [
         'reservas' => $reservasPorId,
         'mesas_ocupadas' => $mesasOcupadasPorUbicacion,
@@ -227,15 +265,11 @@ foreach ($horariosDisponibles as $horario) {
         <div class="navegacion superior-derecha">
 
             <a href="restaurante.php" class="boton boton-volver">
-                ← Volver al inicio
+                ← Volver al Restaurante
             </a>
 
         </div>
 
-
-        <!-- ==========================================
-             TÍTULO
-        =========================================== -->
 
         <h1> Listado de reservas por fecha</h1>
 
@@ -251,16 +285,14 @@ foreach ($horariosDisponibles as $horario) {
                     type="date"
                     id="fecha"
                     name="fecha"
-                    value="<?php echo htmlspecialchars($fecha); ?>"
-                >
+                    value="<?php echo htmlspecialchars($fecha); ?>">
 
             </div>
 
 
             <button
                 type="submit"
-                class="boton boton-buscar"
-            >
+                class="boton boton-buscar">
                 Buscar reservas
             </button>
 
@@ -286,111 +318,111 @@ foreach ($horariosDisponibles as $horario) {
 
                 <?php foreach ($datosPorHorario as $horario => $datos): ?>
 
-                <div class="horario-bloque">
+                    <div class="horario-bloque">
 
-                    <!-- CABECERA DEL HORARIO -->
-                    <div class="horario-cabecera">
-                        <h3>
-                            🕐 <?php echo htmlspecialchars($horario); ?>
-                            <span class="disponibilidad-badge">
-                                (<?php echo $datos['total_disponibles']; ?> mesas disponibles)
-                            </span>
-                        </h3>
-                    </div>
-
-
-                    <!-- CONTENIDO DEL HORARIO -->
-                    <div class="horario-contenido">
-
-                        <?php if ($datos['tiene_reservas']): ?>
-
-                            <!-- HAY RESERVAS: MOSTRAR POR UBICACIÓN -->
-                            <?php foreach (['A', 'B', 'C', 'D'] as $ubicacion): ?>
-
-                                <?php if (!empty($datos['mesas_ocupadas'][$ubicacion])): ?>
-
-                                    <div class="ubicacion-horario">
-
-                                        <h4>
-                                            📍 Ubicación <?php echo htmlspecialchars($ubicacion); ?>
-                                        </h4>
+                        <!-- CABECERA DEL HORARIO -->
+                        <div class="horario-cabecera">
+                            <h3>
+                                🕐 <?php echo htmlspecialchars($horario); ?>
+                                <span class="disponibilidad-badge">
+                                    (<?php echo $datos['total_disponibles']; ?> mesas disponibles)
+                                </span>
+                            </h3>
+                        </div>
 
 
-                                        <div class="mesas-ocupadas-lista">
+                        <!-- CONTENIDO DEL HORARIO -->
+                        <div class="horario-contenido">
 
-                                            <?php 
-                                            // Agrupar por reserva_id para mostrar mesas unidas
-                                            $reservasEnUbicacion = [];
-                                            foreach ($datos['mesas_ocupadas'][$ubicacion] as $item) {
-                                                $reservaId = $item['reserva_id'];
-                                                if (!isset($reservasEnUbicacion[$reservaId])) {
-                                                    $reservasEnUbicacion[$reservaId] = [
-                                                        'nombre' => $item['nombre'],
-                                                        'apellido' => $item['apellido'],
-                                                        'personas' => $item['personas'],
-                                                        'mesas' => []
-                                                    ];
+                            <?php if ($datos['tiene_reservas']): ?>
+
+                                <!-- HAY RESERVAS: MOSTRAR POR UBICACIÓN -->
+                                <?php foreach (['A', 'B', 'C', 'D'] as $ubicacion): ?>
+
+                                    <?php if (!empty($datos['mesas_ocupadas'][$ubicacion])): ?>
+
+                                        <div class="ubicacion-horario">
+
+                                            <h4>
+                                                📍 Ubicación <?php echo htmlspecialchars($ubicacion); ?>
+                                            </h4>
+
+
+                                            <div class="mesas-ocupadas-lista">
+
+                                                <?php
+                                                // Agrupar por reserva_id para mostrar mesas unidas
+                                                $reservasEnUbicacion = [];
+                                                foreach ($datos['mesas_ocupadas'][$ubicacion] as $item) {
+                                                    $reservaId = $item['reserva_id'];
+                                                    if (!isset($reservasEnUbicacion[$reservaId])) {
+                                                        $reservasEnUbicacion[$reservaId] = [
+                                                            'nombre' => $item['nombre'],
+                                                            'apellido' => $item['apellido'],
+                                                            'personas' => $item['personas'],
+                                                            'mesas' => []
+                                                        ];
+                                                    }
+                                                    $reservasEnUbicacion[$reservaId]['mesas'][] = $item['mesa'];
                                                 }
-                                                $reservasEnUbicacion[$reservaId]['mesas'][] = $item['mesa'];
-                                            }
-                                            
-                                            foreach ($reservasEnUbicacion as $reserva): 
-                                            ?>
 
-                                                <div class="mesa-ocupada-item">
+                                                foreach ($reservasEnUbicacion as $reserva):
+                                                ?>
 
-                                                    <div class="mesa-info">
-                                                        <?php 
-                                                        $mesasInfo = [];
-                                                        foreach ($reserva['mesas'] as $mesa) {
-                                                            $mesasInfo[] = 'Mesa ' . htmlspecialchars($mesa['numero']);
-                                                        }
-                                                        echo implode(' + ', $mesasInfo);
-                                                        ?>
-                                                        <span class="mesa-capacidad">
-                                                            (<?php echo htmlspecialchars($reserva['personas']); ?> pers.)
-                                                        </span>
+                                                    <div class="mesa-ocupada-item">
+
+                                                        <div class="mesa-info">
+                                                            <?php
+                                                            $mesasInfo = [];
+                                                            foreach ($reserva['mesas'] as $mesa) {
+                                                                $mesasInfo[] = 'Mesa ' . htmlspecialchars($mesa['numero']);
+                                                            }
+                                                            echo implode(' + ', $mesasInfo);
+                                                            ?>
+                                                            <span class="mesa-capacidad">
+                                                                (<?php echo htmlspecialchars($reserva['personas']); ?> pers.)
+                                                            </span>
+                                                        </div>
+
+                                                        <div class="reserva-info">
+                                                            <span class="cliente-nombre">
+                                                                <?php echo htmlspecialchars($reserva['nombre'] . ' ' . $reserva['apellido']); ?>
+                                                            </span>
+                                                        </div>
+
                                                     </div>
 
-                                                    <div class="reserva-info">
-                                                        <span class="cliente-nombre">
-                                                            <?php echo htmlspecialchars($reserva['nombre'] . ' ' . $reserva['apellido']); ?>
-                                                        </span>
-                                                    </div>
+                                                <?php endforeach; ?>
 
-                                                </div>
+                                            </div>
 
-                                            <?php endforeach; ?>
 
                                         </div>
 
+                                    <?php endif; ?>
 
-                                    </div>
+                                <?php endforeach; ?>
 
-                                <?php endif; ?>
+                            <?php else: ?>
 
-                            <?php endforeach; ?>
+                                <!-- NO HAY RESERVAS: MOSTRAR TODAS LAS MESAS DISPONIBLES -->
+                                <div class="sin-reservas">
 
-                        <?php else: ?>
+                                    <p class="mensaje-sin-reservas">
+                                        No hay reservas en este horario
+                                    </p>
 
-                            <!-- NO HAY RESERVAS: MOSTRAR TODAS LAS MESAS DISPONIBLES -->
-                            <div class="sin-reservas">
+                                </div>
 
-                                <p class="mensaje-sin-reservas">
-                                    No hay reservas en este horario
-                                </p>
+                            <?php endif; ?>
 
-                            </div>
-
-                        <?php endif; ?>
+                        </div>
 
                     </div>
 
-                </div>
+                <?php endforeach; ?>
 
-            <?php endforeach; ?>
-
-        </div>
+            </div>
 
         <?php endif; ?>
 

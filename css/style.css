@@ -385,6 +385,17 @@ input::placeholder {
     cursor: pointer;
 }
 
+.boton-logout {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 15px;
+    font-weight: 600;
+    box-shadow: none;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
 /* LISTADO DE RESERVAS */
 
 .ubicacion-reservas {

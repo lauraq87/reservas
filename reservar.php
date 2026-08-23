@@ -113,19 +113,19 @@ function horarioPermitido(
     if ($diaSemana >= 1 && $diaSemana <= 5) {
 
         return $minutos >= 600 &&
-               $minutos <= 1440;
+            $minutos <= 1440;
     }
 
     if ($diaSemana === 6) {
 
         return $minutos >= 1320 ||
-               $minutos <= 120;
+            $minutos <= 120;
     }
 
 
     // Domingo: 12:00 a 16:00
     return $minutos >= 720 &&
-           $minutos <= 960;
+        $minutos <= 960;
 }
 
 
@@ -144,8 +144,16 @@ if (
 }
 
 // =====================================================
-// VALIDAR ANTICIPACIÓN DE 15 MINUTOS
+// AJUSTAR MADRUGADA DEL SÁBADO (00:00 - 02:00)
 // =====================================================
+// El sábado el servicio continúa hasta las 02:00 del
+// domingo. La reserva se GUARDA con la fecha del sábado
+// (día de inicio del servicio), pero para los cálculos
+// de anticipación y solapamiento se usa la fecha/hora
+// efectiva (sábado + 1 día).
+
+$fechaGuardar = $fecha;
+$fechaHoraEfectiva = null;
 
 if (
     $fechaObj &&
@@ -154,9 +162,36 @@ if (
     $horaObj->format('H:i') === $hora
 ) {
 
-    $fechaHoraReserva = new DateTime(
-        $fecha . ' ' . $hora
-    );
+    $diaSemana = (int) $fechaObj->format('N');
+
+    $minutos =
+        ((int) substr($hora, 0, 2) * 60)
+        +
+        (int) substr($hora, 3, 2);
+
+
+    if ($diaSemana === 6 && $minutos <= 120) {
+
+        // Madrugada del sábado: la hora real es del domingo
+        $fechaEfectiva = clone $fechaObj;
+        $fechaEfectiva->modify('+1 day');
+
+        $fechaHoraEfectiva = new DateTime(
+            $fechaEfectiva->format('Y-m-d') . ' ' . $hora
+        );
+    } else {
+        $fechaHoraEfectiva = new DateTime(
+            $fecha . ' ' . $hora
+        );
+    }
+}
+
+
+// =====================================================
+// VALIDAR ANTICIPACIÓN DE 15 MINUTOS
+// =====================================================
+
+if ($fechaHoraEfectiva !== null) {
 
     $ahora = new DateTime();
 
@@ -165,7 +200,7 @@ if (
     $limite->modify('+15 minutes');
 
 
-    if ($fechaHoraReserva < $limite) {
+    if ($fechaHoraEfectiva < $limite) {
 
         $errores[] =
             'La reserva debe realizarse con al menos 15 minutos de anticipación.';
@@ -188,13 +223,13 @@ if (!empty($errores)) {
     $contenido .= '<div class="icono-error">⚠️</div>';
     $contenido .= '<h1>No pudo realizarse la reserva</h1>';
 
-       $contenido .= '<ul>';
+    $contenido .= '<ul>';
 
     foreach ($errores as $error) {
 
         $contenido .= '<li>' .
-             htmlspecialchars($error) .
-             '</li>';
+            htmlspecialchars($error) .
+            '</li>';
     }
 
     $contenido .= '</ul>';
@@ -207,21 +242,24 @@ if (!empty($errores)) {
 
     // Limpiar el buffer y mostrar el contenido con HTML completo
     ob_clean();
-    ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error en la Reserva - Sistema de Reservas</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <main class="contenedor">
-        <?php echo $contenido; ?>
-    </main>
-</body>
-</html>
+?>
+    <!DOCTYPE html>
+    <html lang="es">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Error en la Reserva - Sistema de Reservas</title>
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+
+    <body>
+        <main class="contenedor">
+            <?php echo $contenido; ?>
+        </main>
+    </body>
+
+    </html>
 <?php
     ob_end_flush();
     exit;
@@ -232,9 +270,7 @@ if (!empty($errores)) {
 // CALCULAR INICIO Y FIN DE LA RESERVA
 // =====================================================
 
-$inicioReserva = new DateTime(
-    $fecha . ' ' . $hora
-);
+$inicioReserva = $fechaHoraEfectiva;
 
 $finReserva = clone $inicioReserva;
 
@@ -298,7 +334,7 @@ function buscarCombinacion(
     }
 
 
- 
+
     for ($i = 0; $i < $cantidadMesas; $i++) {
 
         for ($j = $i + 1; $j < $cantidadMesas; $j++) {
@@ -380,8 +416,8 @@ if ($mesasAsignadas === null) {
 
     $contenido .= '<p>';
     $contenido .= 'No hay mesas disponibles para ' .
-         htmlspecialchars($personas) .
-         ' personas en ese horario.';
+        htmlspecialchars($personas) .
+        ' personas en ese horario.';
     $contenido .= '</p>';
 
     $contenido .= '<div class="acciones">';
@@ -391,21 +427,24 @@ if ($mesasAsignadas === null) {
 
     // Limpiar el buffer y mostrar el contenido con HTML completo
     ob_clean();
-    ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sin Disponibilidad - Sistema de Reservas</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <main class="contenedor">
-        <?php echo $contenido; ?>
-    </main>
-</body>
-</html>
+?>
+    <!DOCTYPE html>
+    <html lang="es">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sin Disponibilidad - Sistema de Reservas</title>
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+
+    <body>
+        <main class="contenedor">
+            <?php echo $contenido; ?>
+        </main>
+    </body>
+
+    </html>
 <?php
     ob_end_flush();
     exit;
@@ -447,25 +486,25 @@ try {
 
     $stmtReserva->execute([
         ':nombre' =>
-            $nombre,
+        $nombre,
 
         ':apellido' =>
-            $apellido,
+        $apellido,
 
         ':celular' =>
-            $celular,
+        $celular,
 
         ':fecha' =>
-            $fecha,
+        $fechaGuardar,
 
         ':hora' =>
-            $hora,
+        $hora,
 
         ':personas' =>
-            $personas,
+        $personas,
 
         ':duracion' =>
-            120
+        120
     ]);
 
 
@@ -494,20 +533,18 @@ try {
         $stmtReservaMesa->execute([
 
             ':reserva_id' =>
-                $reservaId,
+            $reservaId,
 
             ':mesa_id' =>
-                $mesa['id']
+            $mesa['id']
         ]);
     }
 
 
     $pdo->commit();
-    
+
     // Invalidar el cache de disponibilidad para la ubicación asignada
     Disponibilidad::invalidarCache($ubicacionAsignada);
-
-
 } catch (PDOException $e) {
 
     if ($pdo->inTransaction()) {
@@ -530,21 +567,24 @@ try {
 
     // Limpiar el buffer y mostrar el contenido con HTML completo
     ob_clean();
-    ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error del Sistema - Sistema de Reservas</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <main class="contenedor">
-        <?php echo $contenido; ?>
-    </main>
-</body>
-</html>
+?>
+    <!DOCTYPE html>
+    <html lang="es">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Error del Sistema - Sistema de Reservas</title>
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+
+    <body>
+        <main class="contenedor">
+            <?php echo $contenido; ?>
+        </main>
+    </body>
+
+    </html>
 <?php
     ob_end_flush();
     exit;
@@ -578,20 +618,15 @@ $contenido .= '<span class="detalle-valor">' . htmlspecialchars($nombre) . ' ' .
 $contenido .= '</div>';
 $contenido .= '</div>';
 
-// Renglón 2: Fecha + Personas + Ubicación
-$contenido .= '<div class="detalle-item tres-columnas">';
+// Renglón 2: Fecha + Hora + Ubicación
+$contenido .= '<div class="detalle-item dos-columnas">';
 $contenido .= '<div class="detalle-group-compact">';
 $contenido .= '<span class="detalle-label">Fecha:</span>';
-$contenido .= '<span class="detalle-valor">' . htmlspecialchars($fecha) . '</span>';
+$contenido .= '<span class="detalle-valor">' . htmlspecialchars($fechaGuardar) . '</span>';
 $contenido .= '<span class="detalle-label">Hora:</span>';
 $contenido .= '<span class="detalle-valor">' . htmlspecialchars($hora) . '</span>';
-
 $contenido .= '</div>';
-$contenido .= '<div class="detalle-group-compact">';
-$contenido .= '<span class="detalle-label">Personas:</span>';
-$contenido .= '<span class="detalle-valor">' . htmlspecialchars($personas) . '</span>';
-$contenido .= '</div>';
-$contenido .= '<div class="detalle-group-compact">';
+$contenido .= '<div class="detalle-group">';
 $contenido .= '<span class="detalle-label">Ubicación:</span>';
 $contenido .= '<span class="detalle-valor">' . htmlspecialchars($ubicacionAsignada) . '</span>';
 $contenido .= '</div>';
@@ -620,18 +655,21 @@ ob_clean();
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reserva Confirmada - Sistema de Reservas</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <main class="contenedor">
         <?php echo $contenido; ?>
     </main>
 </body>
+
 </html>
 <?php
 ob_end_flush();
-exit; 
+exit;
