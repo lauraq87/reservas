@@ -1,3 +1,8 @@
+<?php
+$nombre = isset($_GET['nombre']) ? htmlspecialchars($_GET['nombre']) : '';
+$apellido = isset($_GET['apellido']) ? htmlspecialchars($_GET['apellido']) : '';
+$celular = isset($_GET['celular']) ? htmlspecialchars($_GET['celular']) : '';
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -59,6 +64,7 @@
                             id="nombre"
                             name="nombre"
                             placeholder="Tu nombre"
+                            value="<?php echo $nombre; ?>"
                             required>
 
                     </div>
@@ -74,6 +80,7 @@
                             id="apellido"
                             name="apellido"
                             placeholder="Tu apellido"
+                            value="<?php echo $apellido; ?>"
                             required>
 
                     </div>
@@ -93,6 +100,7 @@
                         placeholder="Tu número de celular"
                         pattern="[0-9+\- ]+"
                         title="Solo números, + y -"
+                        value="<?php echo $celular; ?>"
                         required
                         oninput="this.value = this.value.replace(/[^0-9+\- ]/g, '')">
 

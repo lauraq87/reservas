@@ -215,7 +215,7 @@ if ($fechaHoraEfectiva !== null) {
 if (!empty($errores)) {
 
     $contenido = '<div class="navegacion superior-derecha">';
-    $contenido .= '<a href="reservarMesa.php" class="boton boton-volver">Realizar otra reserva</a>';
+    $contenido .= '<a href="reservarMesa.php?nombre=' . urlencode($nombre) . '&apellido=' . urlencode($apellido) . '&celular=' . urlencode($celular) . '" class="boton boton-volver">Realizar otra reserva</a>';
     $contenido .= '<a href="index.php" class="boton boton-volver">← Volver al inicio</a>';
     $contenido .= '</div>';
 
@@ -236,7 +236,7 @@ if (!empty($errores)) {
 
     $contenido .= '<div class="acciones">';
     $contenido .= '<a href="index.php" class="boton boton-grande">Volver al inicio</a>';
-    $contenido .= '<a href="reservarMesa.php" class="boton boton-secundario">Intentar nuevamente</a>';
+    $contenido .= '<a href="reservarMesa.php?nombre=' . urlencode($nombre) . '&apellido=' . urlencode($apellido) . '&celular=' . urlencode($celular) . '" class="boton boton-secundario">Intentar nuevamente</a>';
     $contenido .= '</div>';
     $contenido .= '</div>';
 
@@ -421,7 +421,7 @@ if ($mesasAsignadas === null) {
     $contenido .= '</p>';
 
     $contenido .= '<div class="acciones">';
-    $contenido .= '<a href="reservarMesa.php" class="boton boton-secundario">Intentar con otros datos</a>';
+    $contenido .= '<a href="reservarMesa.php?nombre=' . urlencode($nombre) . '&apellido=' . urlencode($apellido) . '&celular=' . urlencode($celular) . '" class="boton boton-secundario">Intentar con otros datos</a>';
     $contenido .= '</div>';
     $contenido .= '</div>';
 
@@ -561,7 +561,7 @@ try {
 
     $contenido .= '<div class="acciones">';
     $contenido .= '<a href="index.php" class="boton boton-grande">Salir</a>';
-    $contenido .= '<a href="reservarMesa.php" class="boton boton-secundario">Intentar nuevamente</a>';
+    $contenido .= '<a href="reservarMesa.php?nombre=' . urlencode($nombre) . '&apellido=' . urlencode($apellido) . '&celular=' . urlencode($celular) . '" class="boton boton-secundario">Intentar nuevamente</a>';
     $contenido .= '</div>';
     $contenido .= '</div>';
 
@@ -596,7 +596,7 @@ try {
 // =====================================================
 
 $contenido = '<div class="navegacion superior-derecha">';
-$contenido .= '<a href="reservarMesa.php" class="boton boton-volver">Realizar otra reserva</a>';
+$contenido .= '<a href="reservarMesa.php?nombre=' . urlencode($nombre) . '&apellido=' . urlencode($apellido) . '&celular=' . urlencode($celular) . '" class="boton boton-volver">Realizar otra reserva</a>';
 $contenido .= '<a href="index.php" class="boton boton-volver">← Volver al inicio</a>';
 $contenido .= '</div>';
 
@@ -622,7 +622,14 @@ $contenido .= '</div>';
 $contenido .= '<div class="detalle-item dos-columnas">';
 $contenido .= '<div class="detalle-group-compact">';
 $contenido .= '<span class="detalle-label">Fecha:</span>';
-$contenido .= '<span class="detalle-valor">' . htmlspecialchars($fechaGuardar) . '</span>';
+
+// Formatear fecha con nombre del día en español
+$fechaFormateada = DateTime::createFromFormat('Y-m-d', $fechaGuardar);
+$diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+$nombreDia = $diasSemana[$fechaFormateada->format('w')];
+$fechaFormateada = $nombreDia . ' ' . $fechaFormateada->format('d-m-Y');
+
+$contenido .= '<span class="detalle-valor">' . htmlspecialchars($fechaFormateada) . '</span>';
 $contenido .= '<span class="detalle-label">Hora:</span>';
 $contenido .= '<span class="detalle-valor">' . htmlspecialchars($hora) . '</span>';
 $contenido .= '</div>';

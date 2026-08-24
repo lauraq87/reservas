@@ -3,19 +3,12 @@
 session_start();
 require_once 'config/database.php';
 
-// ======================================================
-// PROCESAR LOGOUT
-// ======================================================
-
 if (isset($_GET['logout'])) {
     session_destroy();
     header('Location: restaurante.php');
     exit;
 }
 
-// ======================================================
-// VERIFICAR SI EL USUARIO YA INGRESÓ
-// ======================================================
 
 // Procesar login si se envió el formulario
 if (isset($_POST['login_submit'])) {
@@ -140,7 +133,8 @@ foreach ($ubicaciones as $ubicacion) {
                         type="text"
                         id="usuario"
                         name="usuario"
-                        autocomplete="off"
+                        value="usuario"
+                        disabled
                     >
                 </div>
                 
@@ -150,7 +144,8 @@ foreach ($ubicaciones as $ubicacion) {
                         type="password"
                         id="password"
                         name="password"
-                        autocomplete="off"
+                        value="123456"
+                        disabled
                     >
                 </div>
                 
@@ -161,9 +156,7 @@ foreach ($ubicaciones as $ubicacion) {
         </div>
 
         <?php else: ?>
-        <!-- ==========================================
-             NAVEGACIÓN
-        =========================================== -->
+
 
         <div class="navegacion superior-derecha">
             <a href="restaurante.php?logout=1" class="boton boton-logout">
@@ -173,19 +166,14 @@ foreach ($ubicaciones as $ubicacion) {
         </div>
 
 
-        <!-- ==========================================
-             TÍTULO
-        =========================================== -->
+
 
         <h1>
              Información del Restaurante
         </h1>
 
 
-        <!-- ==========================================
-             BOTONES DE ACCIÓN
-        =========================================== -->
-
+        
         <div class="botones-inicio">
 
             <a
