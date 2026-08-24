@@ -1369,9 +1369,7 @@ form button {
     color: rgba(255, 255, 255, 0.9);
 }
 
-/* ==========================================
-   RESPONSIVE
-========================================== */
+/*RESPONSIVE*/
 
 @media (max-width: 900px) {
 
@@ -1563,9 +1561,7 @@ form button {
     }
 }
 
-/* ==========================================
-   FORMULARIO SIN SCROLL
-========================================== */
+/*FORMULARIO SIN SCROLL*/
 
 .contenedor.reservar-mesa {
     height: 85vh;
@@ -1654,9 +1650,7 @@ form button {
     font-size: 16px;
 }
 
-/* ==========================================
-   FORMULARIO DE LOGIN
-========================================== */
+/*FORMULARIO DE LOGIN*/
 
 .login-container {
     max-width: 400px;
@@ -1717,9 +1711,7 @@ form button {
     margin-top: 10px;
 }
 
-/* ==========================================
-   CONTENEDOR SIN SCROLL
-========================================== */
+/*CONTENEDOR SIN SCROLL*/
 
 .contenedor.sin-scroll {
     height: 80vh;

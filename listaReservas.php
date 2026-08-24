@@ -47,7 +47,7 @@ function generarHorariosDisponibles($fecha)
     $diaSemana = (int) $fechaObj->format('N');
     $horarios = [];
 
-    // Lunes a viernes: 10:00 a 24:00 (cada 15 minutos)
+    // Lunes a viernes: 10:00 a 24:00 
     if ($diaSemana >= 1 && $diaSemana <= 5) {
         for ($hora = 10; $hora < 24; $hora++) {
             for ($min = 0; $min < 60; $min += 15) {
@@ -88,9 +88,7 @@ $horariosDisponibles = generarHorariosDisponibles($fecha);
 
 function obtenerMesasOcupadasEnHorario($pdo, $fecha, $hora)
 {
-    // Una mesa está ocupada si el intervalo de la reserva
-    // [fecha+hora, fecha+hora+duración) se solapa con el
-    // intervalo del horario consultado (120 minutos).
+
     $inicioHorario = $fecha . ' ' . $hora . ':00';
 
     $finHorario = (new DateTime($inicioHorario))
@@ -127,7 +125,7 @@ function obtenerMesasOcupadasEnHorario($pdo, $fecha, $hora)
 }
 
 // ======================================================
-// ORGANIZAR DATOS POR HORARIO
+//  DATOS POR HORARIO
 // ======================================================
 
 $datosPorHorario = [];
@@ -141,8 +139,7 @@ foreach ($horariosDisponibles as $horario) {
     }
 
     // Reservas que COMIENZAN en este horario y en esta fecha
-    // (para no repetir la misma reserva en cada bloque
-    // de 15 minutos mientras dura)
+
     $mesasReservasQueInician = array_filter(
         $mesasOcupadas,
         function ($mesaOcupada) use ($fecha, $horario) {
@@ -151,7 +148,7 @@ foreach ($horariosDisponibles as $horario) {
         }
     );
 
-    // Si ninguna reserva comienza en este horario, no lo mostramos
+
     if (empty($mesasReservasQueInician)) {
         continue;
     }
@@ -184,7 +181,6 @@ foreach ($horariosDisponibles as $horario) {
         'D' => []
     ];
 
-    // Marcar mesas ocupadas
     $mesasOcupadasIds = [];
     foreach ($mesasOcupadas as $mesaOcupada) {
         $mesasOcupadasIds[] = $mesaOcupada['mesa_id'];
@@ -330,13 +326,10 @@ foreach ($horariosDisponibles as $horario) {
                             </h3>
                         </div>
 
-
-                        <!-- CONTENIDO DEL HORARIO -->
                         <div class="horario-contenido">
 
                             <?php if ($datos['tiene_reservas']): ?>
 
-                                <!-- HAY RESERVAS: MOSTRAR POR UBICACIÓN -->
                                 <?php foreach (['A', 'B', 'C', 'D'] as $ubicacion): ?>
 
                                     <?php if (!empty($datos['mesas_ocupadas'][$ubicacion])): ?>
